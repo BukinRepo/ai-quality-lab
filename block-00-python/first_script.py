@@ -10,5 +10,7 @@ with sync_playwright() as p:                       # with = відкрити і 
 
     page.get_by_role("link", name="Get started").click()
     print(f"Тепер ми на: {page.url}")
+    print(page.get_by_role("heading", level=1).inner_text())
+    page.screenshot(path="shot.png")
 
     browser.close()
