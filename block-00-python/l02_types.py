@@ -26,7 +26,7 @@ with sync_playwright() as p:
     # --- Завдання В: розрахунок ---
     qty = 3
     total = price * qty
-    total_text = f"${total}"
+    total_text = f"${total:.2f}"
     print(f"{qty} x {price_text} = {total_text}")
 
     # --- Завдання Г: назва товару ---
@@ -35,8 +35,8 @@ with sync_playwright() as p:
     print("Backpack" in name)
 
 
-    page.locator("[data-test=\"item-4-title-link\"]").click()
-    inner_price = float(page.locator("[data-test=\"inventory-item-price\"]").inner_text().strip("$"))
+    page.locator(".inventory_item_name").first.click()
+    inner_price = float(page.locator(".inventory_details_price").first.inner_text().strip("$"))
     print(inner_price == price)
 
     browser.close()
