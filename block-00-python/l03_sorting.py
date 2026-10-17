@@ -18,6 +18,6 @@ with sync_playwright() as p:
 
     page.locator("[data-test='product-sort-container']").select_option(label="Name (Z to A)")
     names = page.locator(".inventory_item_name").all_inner_texts()
-    assert names == sorted(names, reverse= True), f"Сортування за назвою зламане: {names}"
+    assert names == sorted(names, key=str.lower, reverse= True), f"Сортування за назвою зламане: {names}"
     print("✅ Сортування за назвою працює")
     browser.close()
