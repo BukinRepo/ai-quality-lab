@@ -38,7 +38,7 @@ with sync_playwright() as p:
             print(f"{name}: ${price:.2f}")
 
     # --- Д. Перевірка (assert = справжній тест) ---
-    assert all(p > 0 for p in list(products.values())), f"Товари мають бути більше 0, а маємо {products.values()}"
+    assert all(p > 0 for p in products.values()), f"Товари мають бути більше 0, а маємо {list(products.values())}"
     print(f"Товари більше 0")
     # assert <умова>, "повідомлення, якщо впало"
     browser.close()
