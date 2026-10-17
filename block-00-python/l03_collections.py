@@ -34,15 +34,11 @@ with sync_playwright() as p:
     print(products)
     print(products["Sauce Labs Onesie"])
     for name, price in products.items():
-        if price >= 15:
+        if price > 15:
             print(f"{name}: ${price:.2f}")
 
     # --- Д. Перевірка (assert = справжній тест) ---
-    assert all(p >= 0 for p in products.values()), f"Товари мають бути більше 0, а маємо {products.values()}"
+    assert all(p > 0 for p in list(products.values())), f"Товари мають бути більше 0, а маємо {products.values()}"
+    print(f"Товари більше 0")
     # assert <умова>, "повідомлення, якщо впало"
-    result = []
-    for p in [5, 15, 25]:
-        if p > 10:
-            result.append(p * 2)
-    print(result)
     browser.close()

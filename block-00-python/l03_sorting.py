@@ -12,10 +12,12 @@ with sync_playwright() as p:
 
     # Сортування та перевірка
     prices_text = page.locator(".inventory_item_price").all_inner_texts()
-    prices_LtoH = [float(price.replace("$", "")) for price in prices_text]
-    prices_page = []
-    for price in prices_text:
-        prices_page.append(float(price.replace("$", "")))
-    assert prices_LtoH == prices_page, f"Сортування зламане: {prices_LtoH}"
+    prices = [float(price.replace("$", "")) for price in prices_text]
+    assert prices == sorted(prices), f"Сортування ціни зламане: {prices}"
     print("✅ Сортування за ціною працює")
+
+    page.locator("[data-test='product-sort-container']").select_option(label="Name (Z to A)")
+    names = page.locator(".inventory_item_name").all_inner_texts()
+    assert names == sorted(names, reverse= True), f"Сортування за назвою зламане: {names}"
+    print("✅ Сортування за назвою працює")
     browser.close()
