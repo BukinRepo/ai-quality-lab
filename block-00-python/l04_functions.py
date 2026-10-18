@@ -2,9 +2,12 @@ from playwright.sync_api import sync_playwright, Page
 from playwright.sync_api import expect
 
 BASE_URL = "https://www.saucedemo.com/"
-USERS = ["standard_user", "problem_user", "performance_glitch_user", "error_user", "visual_user"]
+USERS = ["standard_user", "problem_user", "performance_glitch_user", "error_user", "locked_out_user", "visual_user"]
 PASSWORD = "secret_sauce"
-SORT_LABELS = ["Price (low to high)","Price (high to low)"]
+SORT_CASES = [
+    {"label": "Price (low to high)", "reverse": False},
+    {"label": "Price (high to low)", "reverse": True},
+]
 
 
 def login(page: Page, username: str, password: str = PASSWORD) -> None:
@@ -41,36 +44,27 @@ def is_sorted(values: list, reverse: bool = False) -> bool:
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
-    context = browser.new_context()
-    page = context.new_page()
-
-    login(page, "standard_user")
-    sort_by(page, "Price (low to high)")
-    prices = get_prices(page)
-    assert is_sorted(prices), f"Сортування зламане: {prices}"
-    print(f"✅ low→high: {prices}")
-
-    sort_by(page, "Price (high to low)")
-    prices2 = get_prices(page)
-    assert is_sorted(prices2, reverse=True), f"Сортування зламане: {prices2}"
-    print(f"✅ high→low: {prices2}")
-    context.close()
-
     # Перевірка всіх юзерів
     print("\n----------ALL Users------------")
+    failures = []
     for user in USERS:
         print(f"\nТест для юзера = {user}")
         context = browser.new_context()
         page = context.new_page()
-        login(page, user)
-        for label_sort in SORT_LABELS:
-            sort_by(page, label_sort)
+        try:
+            login(page, user)
+        except AssertionError as e:
+            failures.append(f" User = {user}: логін не вдався — {e}")
+            context.close()
+            continue
+        for case in SORT_CASES:
+            sort_by(page, case["label"])
             prices = get_prices(page)
-            reverse=False
-            if label_sort == "Price (high to low)": reverse=True
-            if is_sorted(prices, reverse=reverse):
-                print(f"✅Сортування працює {label_sort}: {prices}. User = {user}: ✅")
-            else:
-                print(f"Сортування зламане {label_sort}: {prices}. User = {user}: ❌")
+            if is_sorted(prices, case["reverse"]):
+                print(f"✅Сортування працює {case["label"]}: {prices}. User = {user}: ✅")
+            if not is_sorted(prices, case["reverse"]):
+                failures.append(f" User = {user} | {case["label"]}: {prices}.")
+                print(f"Сортування зламане {case["label"]}: {prices}. User = {user}: ❌")
         context.close()
+    assert not failures, "Зламане сортування:\n" + "\n".join(failures)
     browser.close()
