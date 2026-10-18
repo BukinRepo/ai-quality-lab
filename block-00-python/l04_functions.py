@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright, Page
 from playwright.sync_api import expect
 
 BASE_URL = "https://www.saucedemo.com/"
-USERS = ["standard_user", "problem_user", "performance_glitch_user", "error_user", "locked_out_user", "visual_user"]
+USERS = ["standard_user", "problem_user", "performance_glitch_user", "error_user", "visual_user"]
 PASSWORD = "secret_sauce"
 SORT_CASES = [
     {"label": "Price (low to high)", "reverse": False},
@@ -40,7 +40,17 @@ def is_sorted(values: list, reverse: bool = False) -> bool:
     """True, якщо список уже відсортований."""
     return values == sorted(values, reverse=reverse)
 
-
+def check_locked_out_user(browser) -> None:
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto(BASE_URL)
+    page.get_by_placeholder("Username").fill("locked_out_user")
+    page.get_by_placeholder("Password").fill(PASSWORD)
+    page.get_by_role("button", name="Login").click()
+    expect(page).to_have_url(BASE_URL)
+    expect(page.locator("[data-test='error']")).to_contain_text("locked out")
+    print("locked_out_user - work as expected")
+    context.close()
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
@@ -61,10 +71,11 @@ with sync_playwright() as p:
             sort_by(page, case["label"])
             prices = get_prices(page)
             if is_sorted(prices, case["reverse"]):
-                print(f"✅Сортування працює {case["label"]}: {prices}. User = {user}: ✅")
-            if not is_sorted(prices, case["reverse"]):
-                failures.append(f" User = {user} | {case["label"]}: {prices}.")
-                print(f"Сортування зламане {case["label"]}: {prices}. User = {user}: ❌")
+                print(f"✅Сортування працює {case['label']}: {prices}. User = {user}: ✅")
+            else:
+                failures.append(f" User = {user} | {case['label']}: {prices}.")
+                print(f"Сортування зламане {case['label']}: {prices}. User = {user}: ❌")
         context.close()
-    assert not failures, "Зламане сортування:\n" + "\n".join(failures)
+    check_locked_out_user(browser)
     browser.close()
+    assert not failures, "Падіння:\n" + "\n".join(failures)
