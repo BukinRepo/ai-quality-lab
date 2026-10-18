@@ -4,6 +4,7 @@ from playwright.sync_api import expect
 BASE_URL = "https://www.saucedemo.com/"
 USERS = ["standard_user", "problem_user", "performance_glitch_user", "error_user", "visual_user"]
 PASSWORD = "secret_sauce"
+SORT_LABELS = ["Price (low to high)","Price (high to low)"]
 
 
 def login(page: Page, username: str, password: str = PASSWORD) -> None:
@@ -12,7 +13,7 @@ def login(page: Page, username: str, password: str = PASSWORD) -> None:
     page.get_by_placeholder("Username").fill(username)
     page.get_by_placeholder("Password").fill(password)
     page.get_by_role("button", name="Login").click()
-    expect_page = "https://www.saucedemo.com/inventory.html"
+    expect_page = f"{BASE_URL}inventory.html"
     expect(page, f"Очікували сторінку {expect_page}").to_have_url(expect_page)
 
 
@@ -24,7 +25,7 @@ def parse_price(text: str) -> float:
 def get_prices(page: Page) -> list[float]:
     """Збирає всі ціни на сторінці як float."""
     price_text = page.locator(".inventory_item_price").all_inner_texts()
-    return [float(price.replace("$", "")) for price in price_text]
+    return [parse_price(price) for price in price_text]
 
 
 def sort_by(page: Page, label: str) -> None:
@@ -40,36 +41,36 @@ def is_sorted(values: list, reverse: bool = False) -> bool:
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
-    page = browser.new_page()
+    context = browser.new_context()
+    page = context.new_page()
 
     login(page, "standard_user")
     sort_by(page, "Price (low to high)")
     prices = get_prices(page)
-    assert is_sorted(get_prices(page)), f"Сортування зламане: {prices}"
+    assert is_sorted(prices), f"Сортування зламане: {prices}"
     print(f"✅ low→high: {prices}")
 
     sort_by(page, "Price (high to low)")
     prices2 = get_prices(page)
     assert is_sorted(prices2, reverse=True), f"Сортування зламане: {prices2}"
     print(f"✅ high→low: {prices2}")
+    context.close()
 
     # Перевірка всіх юзерів
     print("\n----------ALL Users------------")
     for user in USERS:
         print(f"\nТест для юзера = {user}")
+        context = browser.new_context()
+        page = context.new_page()
         login(page, user)
-        sort_by(page, "Price (low to high)")
-        prices = get_prices(page)
-        if is_sorted(prices):
-            print(f"✅ low→high: {prices}. User = {user}: ✅")
-        else:
-            print(f"Сортування зламане: {prices}. User = {user}: ❌")
-
-        sort_by(page, "Price (high to low)")
-        prices2 = get_prices(page)
-        if is_sorted(prices2, reverse=True):
-            print(f"✅ high→low: {prices2}. User = {user}: ✅")
-        else:
-            print(f"Сортування зламане: {prices2}. User = {user}: ❌")
-
+        for label_sort in SORT_LABELS:
+            sort_by(page, label_sort)
+            prices = get_prices(page)
+            reverse=False
+            if label_sort == "Price (high to low)": reverse=True
+            if is_sorted(prices, reverse=reverse):
+                print(f"✅Сортування працює {label_sort}: {prices}. User = {user}: ✅")
+            else:
+                print(f"Сортування зламане {label_sort}: {prices}. User = {user}: ❌")
+        context.close()
     browser.close()
